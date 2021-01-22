@@ -34,11 +34,15 @@ int main() {
   uWS::Hub h;
 
   PID pid;
-  /**
-   * TODO: Initialize the pid variable.
-   */
+  //PID pid_throttle;
+  pid.Init(0.2, 0.0, 3.0); // course starting coefficients manually modified to fit the simulator track
+  //pid.Init(0.2, 0.0004, 3.0); // course starting coefficients manually modified to fit the simulator track (v2)
+  //pid_throttle.Init(0.3,0.0,0.02);
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
+    
+//    h.onMessage([&pid, &pid_throttle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+//                       uWS::OpCode opCode) {
+  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -57,13 +61,29 @@ int main() {
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
-          /**
-           * TODO: Calculate steering value here, remember the steering value is
-           *   [-1, 1].
-           * NOTE: Feel free to play around with the throttle and speed.
-           *   Maybe use another PID controller to control the speed!
-           */
-          
+          double throttle_value;
+
+            //run PID update and calculate steer value
+            pid.UpdateError(cte);
+            steer_value = pid.TotalError();
+            //just in case: make sure steer value does not exceed min/max values
+            if (steer_value > 1) {
+                steer_value = 1;
+            } else if (steer_value < -1) {
+                steer_value = -1;
+            }
+            
+            //run PID for throttle
+            //run PID update and calculate steer value
+            //pid_throttle.UpdateError(cte);
+            //throttle_value = pid_throttle.TotalError();
+            //just in case: make sure steer value does not exceed min/max values
+            //if (throttle_value > 1) {
+            //    throttle_value = 1;
+            //} else if (throttle_value < -1) {
+            //    throttle_value = -1;
+            //}
+
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
                     << std::endl;
@@ -71,6 +91,7 @@ int main() {
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.3;
+          //msgJson["throttle"] = 0.5 - throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
